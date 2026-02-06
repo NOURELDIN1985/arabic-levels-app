@@ -1,0 +1,105 @@
+import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../models/level.dart';
+
+class LevelDetailScreen extends StatefulWidget {
+  final Level level;
+  const LevelDetailScreen({super.key, required this.level});
+
+  @override
+  State<LevelDetailScreen> createState() => _LevelDetailScreenState();
+}
+
+class _LevelDetailScreenState extends State<LevelDetailScreen> {
+  final AudioPlayer _player = AudioPlayer();
+
+  Future<void> _playAssetTryBoth(String assetFileName) async {
+    if (assetFileName.isEmpty) return;
+    final candidates = ['audio/$assetFileName.mp3', 'audio/$assetFileName.wav'];
+    for (final path in candidates) {
+      try {
+        await _player.play(AssetSource(path.replaceFirst('audio/', 'audio/')));
+        return;
+      } catch (e) {
+        // try next
+      }
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ملف الصوت غير موجود أو بتنسيق غير مدعوم')),
+    );
+  }
+
+  void _onChoiceTapped(int index) {
+    final correct = index == widget.level.correctChoiceIndex;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(correct ? 'صحيح ✅' : 'خطأ ❌')),
+    );
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final level = widget.level;
+    return Scaffold(
+      appBar: AppBar(title: Text('مستوى ${level.id}')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(level.display, style: const TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 140,
+              child: level.image.isNotEmpty
+                  ? Image.asset('assets/images/${level.image}.png', fit: BoxFit.contain, errorBuilder: (_, __, ___) {
+                      return const Center(child: Text('ضع صورة في assets/images'));
+                    })
+                  : const Center(child: Text('لا توجد صورة')),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _playAssetTryBoth(widget.level.audioLetter),
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('صوت الحرف'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _playAssetTryBoth(widget.level.audioWord),
+                  icon: const Icon(Icons.music_note),
+                  label: const Text('صوت الكلمة'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.separated(
+                itemCount: level.choices.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, idx) {
+                  return ElevatedButton(
+                    onPressed: () => _onChoiceTapped(idx),
+                    style: ElevatedButton.styleFrom(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    ),
+                    child: Text(level.choices[idx], textAlign: TextAlign.right),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

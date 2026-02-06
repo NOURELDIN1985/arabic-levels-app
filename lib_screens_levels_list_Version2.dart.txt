@@ -1,0 +1,75 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../models/level.dart';
+import 'level_detail.dart';
+
+class LevelsListScreen extends StatefulWidget {
+  const LevelsListScreen({super.key});
+  @override
+  State<LevelsListScreen> createState() => _LevelsListScreenState();
+}
+
+class _LevelsListScreenState extends State<LevelsListScreen> {
+  late Future<List<Level>> _levelsFuture;
+
+  Future<List<Level>> loadLevels() async {
+    final jsonStr = await rootBundle.loadString('assets/levels.json');
+    final data = json.decode(jsonStr) as List;
+    return data.map((e) => Level.fromJson(e)).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _levelsFuture = loadLevels();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('قائمة المستويات')),
+      body: FutureBuilder<List<Level>>(
+        future: _levelsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('خطأ: ${snapshot.error}'));
+          }
+          final levels = snapshot.data!;
+          return GridView.builder(
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.1,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: levels.length,
+            itemBuilder: (context, index) {
+              final level = levels[index];
+              return ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => LevelDetailScreen(level: level)),
+                  );
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(level.display, style: const TextStyle(fontSize: 22)),
+                    const SizedBox(height: 8),
+                    Text('المستوى ${level.id}', style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
